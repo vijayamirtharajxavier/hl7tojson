@@ -2,8 +2,12 @@ package com.axana.app;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
@@ -11,6 +15,11 @@ import java.util.regex.Pattern;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import ca.uhn.hl7v2.HL7Exception;
 import ca.uhn.hl7v2.model.Composite;
@@ -21,7 +30,9 @@ import ca.uhn.hl7v2.model.Type;
 import ca.uhn.hl7v2.parser.GenericParser;
 import ca.uhn.hl7v2.parser.Parser;
 
-public class HL7toJsonSubFieldNameDtConvRepeatable {
+public class HL7toJsonSubFieldNameDtConvRepeatable_jsonconvert {
+
+    private static final Map<String, String> HL7_FIELD_NAMES = createFieldNameMap();
 
     // Function to convert camelCase to snake_case
     private static String toSnakeCase(String str) {
@@ -30,7 +41,7 @@ public class HL7toJsonSubFieldNameDtConvRepeatable {
 
     // Function to retrieve field names from a segment and order them
     private static Map<String, Object> getFieldNames(Structure segment) {
-        Map<String, Object> fieldNames = new TreeMap<>(Comparator.comparingInt(HL7toJsonSubFieldNameDtConvRepeatable::extractNumberFromKey));
+        Map<String, Object> fieldNames = new TreeMap<>(Comparator.comparingInt(HL7toJsonSubFieldNameDtConvRepeatable_jsonconvert::extractNumberFromKey));
 
         try {
             for (int i = 1; i <= ((Segment) segment).numFields(); i++) {
@@ -56,7 +67,7 @@ public class HL7toJsonSubFieldNameDtConvRepeatable {
 
     // Function to retrieve subfields from a composite data type
     private static Map<String, Object> getSubFields(Composite composite) {
-        Map<String, Object> subFieldNames = new TreeMap<>(Comparator.comparingInt(HL7toJsonSubFieldNameDtConvRepeatable::extractNumberFromKey));
+        Map<String, Object> subFieldNames = new TreeMap<>(Comparator.comparingInt(HL7toJsonSubFieldNameDtConvRepeatable_jsonconvert::extractNumberFromKey));
 
         try {
             Type[] components = composite.getComponents();
@@ -157,7 +168,7 @@ public class HL7toJsonSubFieldNameDtConvRepeatable {
         return jsonOutput;
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws JsonProcessingException {
         String hl7Message = "MSH|^~\\&|pcc_ara|novopharm_lab-1504963468-02|QuantumRx|NOVOPH|20230414102348||ADT^A01|42776643283|P|2.5|\r" +
         "EVN|A01|20230414110000|||DHershberger|20230414110000|novopharm_fwpi-1504963468-02\r" +
         "PID|1|781992|2235656|1230044|Jammy^Smithra^AA^BB^CC^EE^D|C|19370831|M|D|E|8300 Seminole Blvd^Lot238^Seminole^FL^33772^United States^GG^FF^Pinellas|F|(727) 539-1200|G|English|M^Married|M^Methodist|0173|034-30-4828|23443-er-3243|R456|Test|India|N|1|U.S.|N|Ind|20200908040908|1|J|K|20230908110608|1|N|O|P|Q|P|\r" +
@@ -171,9 +182,85 @@ public class HL7toJsonSubFieldNameDtConvRepeatable {
 
         try {
             JSONObject jsonOutput = hl7ToJson(hl7Message);
-            System.out.println(jsonOutput.toString(4));
+                    ObjectMapper mapper = new ObjectMapper();
+           String jsonString = jsonOutput.toString();
+        JsonNode rootNode = mapper.readTree(jsonString);
+
+        renameKeys((ObjectNode) rootNode);
+
+        String updatedJsonString = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(rootNode);
+        System.out.println(updatedJsonString);
+
+         //   System.out.println(jsonOutput.toString(4));
         } catch (HL7Exception e) {
             e.printStackTrace();
         }
     }
+
+
+    private static void renameKeys(ObjectNode node) {
+        List<String> keysToRemove = new ArrayList<>();
+        Map<String, JsonNode> newEntries = new HashMap<>();
+
+        Iterator<Map.Entry<String, JsonNode>> fieldsIterator = node.fields();
+
+        while (fieldsIterator.hasNext()) {
+            Map.Entry<String, JsonNode> entry = fieldsIterator.next();
+            String currentKey = entry.getKey();
+            JsonNode value = entry.getValue();
+
+            if (value.isObject()) {
+                renameKeys((ObjectNode) value);
+            }
+
+            // Check for direct key mapping
+            String newKey = HL7_FIELD_NAMES.get(currentKey);
+            if (newKey != null) {
+                newEntries.put(newKey, value);
+                keysToRemove.add(currentKey);
+            } else {
+                // Check for nested key mappings
+                for (String keyPath : HL7_FIELD_NAMES.keySet()) {
+                    if (keyPath.contains(currentKey)) {
+                        String[] pathParts = keyPath.split("\\.");
+                        if (pathParts.length > 1 && pathParts[0].equals(currentKey)) {
+                            String nestedKey = pathParts[1];
+                            if (value.has(nestedKey)) {
+                                String finalNewKey = HL7_FIELD_NAMES.get(keyPath);
+                                JsonNode nestedValue = value.get(nestedKey);
+                                ((ObjectNode) value).set(finalNewKey, nestedValue);
+                                ((ObjectNode) value).remove(nestedKey);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        for (String key : keysToRemove) {
+            node.remove(key);
+        }
+
+        for (Map.Entry<String, JsonNode> entry : newEntries.entrySet()) {
+            node.set(entry.getKey(), entry.getValue());
+        }
+    }
+
+    private static Map<String, String> createFieldNameMap() {
+        Map<String, String> map = new HashMap<>();
+        map.put("msh-10", "MessageControlID");
+        map.put("pid-5.xpn.2", "family_name");
+        map.put("pid-5.ce.2", "family_name");
+        map.put("pid-11.xad.1.sad.1", "street_address_1");
+        map.put("pid-11.xad.1.sad.2", "street_address_2");
+        map.put("pid-11.xad.1.sad.3", "street_address_3");
+        map.put("pid-11.xad.2", "street_address_4");
+        map.put("pid-11.xad.3", "city");
+        map.put("pid-11.xad.4", "state");
+        map.put("pid-11.xad.5", "postal_code");
+       
+        // Add other mappings as needed
+        return map;
+    }
+
 }
