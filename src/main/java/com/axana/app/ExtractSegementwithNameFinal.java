@@ -20,10 +20,8 @@ import ca.uhn.hl7v2.model.Type;
 import ca.uhn.hl7v2.parser.Parser;
 import ca.uhn.hl7v2.parser.PipeParser;
 
-public class ExtractSegmentWithMethodNames {
+public class ExtractSegementwithNameFinal {
 
-
-    
     // Function to retrieve field and subfield names from a segment
     private static Map<String, Object> getFieldNames(Segment segment, Class<?> segmentClass) {
         Map<String, Object> fieldNames = new LinkedHashMap<>();
@@ -34,46 +32,34 @@ public class ExtractSegmentWithMethodNames {
 
             for (int i = 1; i <= numFields; i++) {
                 Type[] fields = segment.getField(i);
-                String fieldIdentifier = Integer.toString(i).trim();
-                System.out.println("main fieldId no: " + fieldIdentifier);
+                String fieldIdentifier = Integer.toString(i);
 
-                System.out.println("fi:" + fieldIdentifier + " of " + segment.getName());
-                HL7Reflection hr = new HL7Reflection();
                 // Retrieve the method name for the field
-                String methodName = HL7Reflection.findMethodNameForSubfield(segmentClass, segment.getName(), fieldIdentifier);
-                
-                // .findMethodNameForSubfield(segmentClass, segment.getName(), fieldIdentifier);
-
-                if (methodName != null) {
-                    System.out.println("Method Name for " + fieldIdentifier + ": " + methodName);
-                } else {
-                    System.out.println("No method found for field: " + fieldIdentifier);
-                }
+                String methodName = findMethodNameForSubfield(segmentClass, segment.getName(), fieldIdentifier);
 
                 for (int j = 0; j < fields.length; j++) {
                     if (fields[j] instanceof Composite) {
                         Composite composite = (Composite) fields[j];
-                        Map<String, Object> compositeFields = new LinkedHashMap<>();
                         Type[] components = composite.getComponents();
-                        
+                        Map<String, String> compositeMap = new LinkedHashMap<>();
+
                         for (int k = 0; k < components.length; k++) {
                             Type component = components[k];
-                            String componentIdentifier = Integer.toString(i) + "." + Integer.toString(k + 1);
-                            System.out.println("comp no: " + componentIdentifier);
-                            String submethodName = findMethodNameForSubfield(segmentClass, segment.getName(), componentIdentifier);
                             if (component instanceof Primitive) {
-                                Primitive primitive = (Primitive) component;
-                                String primitiveName = primitive.getName();
-                                String value = primitive.encode();
+                                String value = component.encode();
+                                String componentName = component.getName();
+                                fieldIdentifier = Integer.toString(i) + "." + Integer.toString(k + 1);
+                                methodName = findMethodNameForSubfield(segmentClass, segment.getName(), fieldIdentifier);
+                                String key = fieldIdentifier;
 
-                                if ((primitiveName.contains("TS") || primitiveName.contains("DTM") || primitiveName.contains("DT"))) {
+                                if ((componentName.contains("TS") || componentName.contains("DTM") || componentName.contains("DT"))) {
                                     value = convertTimestamp(value);
                                 }
-                              //  compositeFields.put(submethodName.split("_")[1] , value);
-                                compositeFields.put(componentIdentifier + " (" + primitiveName + ")" + "["+ submethodName.split("_")[1] + "]", value);
+
+                                compositeMap.put(key + " (" + componentName + ")", value);
                             }
                         }
-                        fieldNames.put(methodName.split("_")[1], compositeFields);
+                        fieldNames.put(methodName, compositeMap);
                     } else if (fields[j] instanceof Primitive) {
                         Primitive primitive = (Primitive) fields[j];
                         String primitiveName = primitive.getName();
@@ -82,8 +68,7 @@ public class ExtractSegmentWithMethodNames {
                         if ((primitiveName.contains("TS") || primitiveName.contains("DTM") || primitiveName.contains("DT"))) {
                             value = convertTimestamp(value);
                         }
-
-                        fieldNames.put(methodName.split("_")[1], value);
+                        fieldNames.put(methodName + " (" + primitiveName + ")", value);
                     }
                 }
             }
@@ -98,7 +83,7 @@ public class ExtractSegmentWithMethodNames {
     private static Class<?> getSegmentClass(String segmentName) {
         try {
             // Construct the fully qualified class name
-            String packageName = "ca.uhn.hl7v2.model.v23.segment"; // Replace with your actual package
+            String packageName = "ca.uhn.hl7v2.model.v251.segment"; // Replace with your actual package
             String className = packageName + "." + segmentName;
             return Class.forName(className);
         } catch (ClassNotFoundException e) {
@@ -113,7 +98,7 @@ public class ExtractSegmentWithMethodNames {
             String[] parts = fieldIdentifier.split("\\.");
             String fieldNumber = parts[0];
             String subfieldNumber = parts.length > 1 ? parts[1] : null;
-            
+
             for (Method method : methods) {
                 if (method.getName().toLowerCase().contains(segmentName.toLowerCase() + fieldNumber)) {
                     if (subfieldNumber != null) {
@@ -140,21 +125,14 @@ public class ExtractSegmentWithMethodNames {
     public static void main(String[] args) {
         try {
             String hl7Message = "MSH|^~\\&|HIS|RIH|EKG|EKG|20240806221120||ADT^A01|MSG00001|P|2.3\r" +
-                                "PID|1||123456^^^Hospital^MR||Doe^John||19650525|M|||123 Main St^^Metropolis^IL^12345|555-1234\r" +
-                                "OBX|1|ST|1234^Test1||Positive|||\r" +
-                                "OBX|2|ST|5678^Test2||Negative|||\r";
+                    "PID|1||123456^^^Hospital^MR||Doe^John||19650525|M|||123 Main St^^Metropolis^IL^12345|555-1234\r" +
+                    "OBX|1|ST|1234^Test1||Positive|||\r" +
+                    "OBX|2|ST|5678^Test2||Negative|||\r";
 
             Parser parser = new PipeParser();
             Message message = parser.parse(hl7Message);
 
-            String[] segmentNames = { "MSH", "PID", "OBX" };
-//            Map<String, JSONObject> jsonMap = new LinkedHashMap<>();
-
-
-
-
-
-
+            String[] segmentNames = {"MSH", "PID", "OBX"};
             Map<String, JSONArray> jsonMap = new LinkedHashMap<>();
 
             for (String segmentName : segmentNames) {
@@ -172,30 +150,13 @@ public class ExtractSegmentWithMethodNames {
                         segmentArray.put(segmentJson);
                     }
                 }
-            
 
                 jsonMap.put(segmentName, segmentArray);
-
-/* 
-            for (String segmentName : segmentNames) {
-                Structure[] structures = message.getAll(segmentName);
-                for (int index = 0; index < structures.length; index++) {
-                    Segment segment = (Segment) structures[index];
-                    
-                    // Retrieve segment class dynamically
-                    Class<?> segmentClass = getSegmentClass(segment.getName());
-                    if (segmentClass != null) {
-                        Map<String, Object> fieldNames = getFieldNames(segment, segmentClass);
-                        JSONObject segmentJson = new JSONObject(fieldNames);
-//                        jsonMap.put(segmentName + "[" + index + "]", segmentJson);
-                     jsonMap.put(segmentName +"["+ index +"]" , segmentJson);
-                    }
-                    }
-            }*/
+            }
 
             JSONObject jsonOutput = new JSONObject(jsonMap);
             System.out.println(jsonOutput.toString(4)); // Pretty print with indentation
-        }
+
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -222,11 +183,4 @@ public class ExtractSegmentWithMethodNames {
         }
         return hl7Timestamp;
     }
-
-
-
-
-
-
-    
 }

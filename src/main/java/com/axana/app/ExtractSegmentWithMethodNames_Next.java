@@ -20,10 +20,10 @@ import ca.uhn.hl7v2.model.Type;
 import ca.uhn.hl7v2.parser.Parser;
 import ca.uhn.hl7v2.parser.PipeParser;
 
-public class ExtractSegmentWithMethodNames {
+public class ExtractSegmentWithMethodNames_Next {
 
 
-    
+    /* 
     // Function to retrieve field and subfield names from a segment
     private static Map<String, Object> getFieldNames(Segment segment, Class<?> segmentClass) {
         Map<String, Object> fieldNames = new LinkedHashMap<>();
@@ -34,15 +34,10 @@ public class ExtractSegmentWithMethodNames {
 
             for (int i = 1; i <= numFields; i++) {
                 Type[] fields = segment.getField(i);
-                String fieldIdentifier = Integer.toString(i).trim();
-                System.out.println("main fieldId no: " + fieldIdentifier);
-
-                System.out.println("fi:" + fieldIdentifier + " of " + segment.getName());
-                HL7Reflection hr = new HL7Reflection();
-                // Retrieve the method name for the field
-                String methodName = HL7Reflection.findMethodNameForSubfield(segmentClass, segment.getName(), fieldIdentifier);
+                String fieldIdentifier = Integer.toString(i);
                 
-                // .findMethodNameForSubfield(segmentClass, segment.getName(), fieldIdentifier);
+                // Retrieve the method name for the field
+                String methodName = findMethodNameForSubfield(segmentClass, segment.getName(), fieldIdentifier);
 
                 if (methodName != null) {
                     System.out.println("Method Name for " + fieldIdentifier + ": " + methodName);
@@ -59,7 +54,6 @@ public class ExtractSegmentWithMethodNames {
                         for (int k = 0; k < components.length; k++) {
                             Type component = components[k];
                             String componentIdentifier = Integer.toString(i) + "." + Integer.toString(k + 1);
-                            System.out.println("comp no: " + componentIdentifier);
                             String submethodName = findMethodNameForSubfield(segmentClass, segment.getName(), componentIdentifier);
                             if (component instanceof Primitive) {
                                 Primitive primitive = (Primitive) component;
@@ -93,7 +87,7 @@ public class ExtractSegmentWithMethodNames {
 
         return fieldNames;
     }
-
+*/
     // Method to dynamically get the segment class using reflection
     private static Class<?> getSegmentClass(String segmentName) {
         try {
@@ -106,6 +100,8 @@ public class ExtractSegmentWithMethodNames {
             return null;
         }
     }
+
+    /* 
 
     private static String findMethodNameForSubfield(Class<?> segmentClass, String segmentName, String fieldIdentifier) {
         try {
@@ -136,6 +132,105 @@ public class ExtractSegmentWithMethodNames {
 
         return null;
     }
+*/
+
+
+
+// Function to retrieve field and subfield names from a segment
+private static Map<String, Object> getFieldNames(Segment segment, Class<?> segmentClass) {
+    Map<String, Object> fieldNames = new LinkedHashMap<>();
+
+    try {
+        int numFields = segment.numFields();
+        System.out.println("Segment " + segment.getName() + " has " + numFields + " fields.");
+
+        for (int i = 1; i <= numFields; i++) {
+            Type[] fields = segment.getField(i);
+            String fieldName = segment.getName() + "-" + i;
+            String fieldIdentifier = Integer.toString(i);
+            // Retrieve the method name for the field
+            String methodName = findMethodNameForField(segmentClass, fieldIdentifier);
+
+            for (int j = 0; j < fields.length; j++) {
+                if (fields[j] instanceof Composite) {
+                    Composite composite = (Composite) fields[j];
+                    Type[] components = composite.getComponents();
+                    JSONObject compositeJson = new JSONObject();
+
+                    for (int k = 0; k < components.length; k++) {
+                        Type component = components[k];
+                        if (component instanceof Primitive) {
+                            String value = component.encode();
+                            String componentName = component.getName();
+                            String subFieldIdentifier = fieldIdentifier + "." + (k + 1);
+                            String subMethodName = findMethodNameForSubfield(segmentClass, subFieldIdentifier);
+
+                            compositeJson.put(subMethodName, value);
+                        }
+                    }
+                    fieldNames.put(methodName, compositeJson);
+                } else if (fields[j] instanceof Primitive) {
+                    Primitive primitive = (Primitive) fields[j];
+                    String primitiveName = primitive.getName();
+                    String value = primitive.encode();
+                    fieldNames.put(methodName + " (" + primitiveName + ")", value);
+                }
+            }
+        }
+    } catch (HL7Exception e) {
+        e.printStackTrace();
+    }
+
+    return fieldNames;
+}
+
+// Helper method to find the method name for a field
+private static String findMethodNameForField(Class<?> segmentClass, String fieldIdentifier) {
+    try {
+        Method[] methods = segmentClass.getDeclaredMethods();
+        for (Method method : methods) {
+            if (method.getName().toLowerCase().contains("get" + fieldIdentifier)) {
+                return method.getName();
+            }
+        }
+    } catch (Exception e) {
+        e.printStackTrace();
+    }
+    return "UnknownField" + fieldIdentifier;
+}
+
+// Helper method to find the method name for a subfield
+private static String findMethodNameForSubfield(Class<?> segmentClass, String fieldIdentifier) {
+    try {
+        String[] parts = fieldIdentifier.split("\\.");
+        String fieldNumber = parts[0];
+        String subfieldNumber = parts.length > 1 ? parts[1] : null;
+        Method[] methods = segmentClass.getDeclaredMethods();
+
+        for (Method method : methods) {
+            if (method.getName().toLowerCase().contains("get" + fieldNumber)) {
+                if (subfieldNumber != null) {
+                    Class<?> returnType = method.getReturnType();
+                    Method[] compositeMethods = returnType.getDeclaredMethods();
+
+                    for (Method compositeMethod : compositeMethods) {
+                        if (compositeMethod.getName().toLowerCase().contains("get" + subfieldNumber)) {
+                            return compositeMethod.getName();
+                        }
+                    }
+                } else {
+                    return method.getName();
+                }
+            }
+        }
+    } catch (Exception e) {
+        e.printStackTrace();
+    }
+    return "UnknownSubField" + fieldIdentifier;
+}
+
+
+
 
     public static void main(String[] args) {
         try {
@@ -222,11 +317,4 @@ public class ExtractSegmentWithMethodNames {
         }
         return hl7Timestamp;
     }
-
-
-
-
-
-
-    
 }
