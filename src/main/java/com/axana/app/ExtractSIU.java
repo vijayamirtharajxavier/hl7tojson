@@ -77,15 +77,6 @@ public class ExtractSIU {
                       //             System.out.println("compo_id : " + componentIdentifier + ", value: " + value);
                                     
                                 }
- 
- /*                               if ("5.1".equals(componentIdentifier) && "OBX".equals(segment.getName())) {
-                                    fieldNames.put("OBX-5.1", value);
-                                    System.out.println("obx 5 is matched");
-                                } else {
-                                    compositeFields.put(componentIdentifier, value);
-                                    System.out.println("not matched obx 5");
-                                }
-   */     
                                 if (primitiveName.contains("TS") || primitiveName.contains("TSComponentOne") || primitiveName.contains("DTM") || primitiveName.contains("DT")) {
                                     value = convertTimestamp(value);
                                 }
@@ -128,12 +119,6 @@ public class ExtractSIU {
                         String primitiveName = primitive.getName();
                         String value = primitive.encode();
 
-                        //if (segment.getName().equals("OBX")) {
-                         //   System.out.println("Else - compo_id : " + i + ", value: " + value);
-                        // System.out.println("Processing field for segment " + segment.getName() + " : " + i + " , FieldName : " + methodName + ", Value : " + value);
- 
-                        //}
-            
 
                         if (primitiveName.contains("TS") || primitiveName.contains("DTM") || primitiveName.contains("DT") || primitiveName.contains("CM_EIP")) {
                             value = convertTimestamp(value);
@@ -157,36 +142,6 @@ public class ExtractSIU {
         return fieldNames;
     }
 
-/*
-private static Map<String, Object> getFieldNames(Segment segment, Class<?> segmentClass) {
-    Map<String, Object> fieldNames = new LinkedHashMap<>();
-    try {
-        int numFields = segment.numFields();
-        for (int i = 1; i <= numFields; i++) {
-            List<Type> fields = Arrays.asList(segment.getField(i));
-            if (fields.isEmpty()) {
-                continue; // Skip processing if fields are empty
-            }
-            String methodName = findMethodNameForSubfield(segmentClass, segment.getName(), i);
-            String key = methodName != null ? methodName.split("_")[1] : "Field_" + i;
-
-            // Continue processing fields as required
-            for (Type field : fields) {
-                if (field instanceof Primitive) {
-                    Primitive primitive = (Primitive) field;
-                    String value = primitive.encode();
-                    fieldNames.put(key, value);
-                }
-                // Handle other cases (e.g., Composite) as necessary
-            }
-        }
-    } catch (HL7Exception e) {
-        e.printStackTrace();
-    }
-    return fieldNames;
-}
-
-*/
     // Method to dynamically get the segment class using reflection
     private static Class<?> getSegmentClass(String segmentName) {
         try {
