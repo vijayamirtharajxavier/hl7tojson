@@ -17,16 +17,15 @@ import ca.uhn.hl7v2.model.Message;
 import ca.uhn.hl7v2.model.Primitive;
 import ca.uhn.hl7v2.model.Segment;
 import ca.uhn.hl7v2.model.Type;
-import ca.uhn.hl7v2.model.v23.message.ORU_R01;
 import ca.uhn.hl7v2.model.v23.message.SIU_S12;
 import ca.uhn.hl7v2.model.v23.message.SIU_S14;
 import ca.uhn.hl7v2.model.v23.message.SIU_S17;
 import ca.uhn.hl7v2.model.v23.segment.MSH;
+import ca.uhn.hl7v2.model.v25.message.ORU_R01;
 import ca.uhn.hl7v2.parser.Parser;
 import ca.uhn.hl7v2.parser.PipeParser;
 
-
-public class ExtractSIU {
+public class ExtractORU_O01ToJson {
 
     // Function to retrieve field and subfield names from a segment
 
@@ -245,7 +244,8 @@ public class ExtractSIU {
                     "SCH|1|551234|5678||RP|CHECKUP||||202408191400|202408191500|||0|min|||||||||12345^Doe^John^A|||555-1234|111-2222\r" +
                     "PID|1||123456^^^HOSPITAL||Doe^John^A||19800101|M|||123 Main St^^Metropolis^NY^10001||555-1234|||M|S|||987-65-4321";
 */
-String hl7Message="MSH|^~\\&|LABADT|MCM|IFENG|IFENG|202408261030||ORU^R01|123456|P|2.3\r" +
+
+String hl7Message="MSH|^~\\&|LABADT|MCM|IFENG|IFENG|202408261030||ORU^O01|123456|P|2.3\r" +
 "PID|1||123456^^^MCM^MR||DOE^JOHN^A||19700101|M|||1234 Main St^^Metropolis^IL^60615|(123)456-7890|(123)456-7891|||123456789|123-45-6789\r" +
 "PV1|1|O|ICU^02^03^MCM||||1234^Jones^Barry^M^^MD|5678^Smith^John^A^^MD|||||||||V1001^|V001|||||||||||||||||||||||||||202408261030\r" +
 "ORC|RE|123456^MCM||123456^MCM||||202408261030|5678^Smith^John^A^^MD\r" +
@@ -257,6 +257,17 @@ String hl7Message="MSH|^~\\&|LABADT|MCM|IFENG|IFENG|202408261030||ORU^R01|123456
 "OBX|5|TX|88304-5^Pathologist's Notes^L|5|Tissue sample adequate for diagnosis|||||F\r" +
 "NTE|1|L|Specimen received in good condition. No issues noted.";
 
+
+
+/*String hl7Message ="MSH|^~\\&|PHARM|AAA|HL7SENDER|HL7RECEIVER|20230821083000||RDE^O11|123456|P|2.3\r" +
+"PID|1||123456^^^Hosp^MR||Doe^John^A||19600101|M|||123 Main St^^Hometown^NY^12345^USA||(555)555-1234|||M|C|123456789|987-65-4320\r" +
+"PV1|1|I|ICU^01^01^Hospital|U|3^Doctor^John|4^Surgeon^Paul|5^Nurse^Anne|||||I|987654321|||||||11111111111\r" +
+"ORC|RE|123456|123456||CM||||20230821083000|||3^Doctor^John^A\r" +
+"RXO|123456^Medication Order^99MED|2||PO|7D|||PRN\r" +
+"RXR|PO^Oral^HL70162\r" +
+"OBX|1|NM|Glucose^Serum^L|1|7.8|mmol/L|3.9-5.6|H|||F";
+*/
+
 String className;
             Parser parser = new PipeParser();
             Message parsedMessage = parser.parse(hl7Message);
@@ -267,8 +278,7 @@ String className;
             String triggerEvent = mshSegment.getMessageType().getTriggerEvent().getValue();
 //System.out.println(messageType + "_" + triggerEvent);
          
-    className = "ca.uhn.hl7v2.model.v23.message." + messageType + "_" + triggerEvent;
-
+                className = "ca.uhn.hl7v2.model.v23.message." + messageType + "_" + triggerEvent;
             
             Class<?> clazz = Class.forName(className);
             Message messageInstance = (Message) clazz.cast(parsedMessage);
@@ -298,19 +308,19 @@ String className;
              //   JsonObject jsonOutput = new JsonObject();
                 
                 processSegment(message.getMSH(), "MSH", jsonOutput);
-                processSegment(message.getRESPONSE().getPATIENT().getPID(), "PID", jsonOutput);
-                processSegment(message.getRESPONSE().getPATIENT().getVISIT().getPV1(), "PV1", jsonOutput);
-                processSegment(message.getRESPONSE().getORDER_OBSERVATION().getORC(), "ORC", jsonOutput);
-                processSegment(message.getRESPONSE().getORDER_OBSERVATION().getOBR(), "OBR", jsonOutput);
+                processSegment(message.getPATIENT_RESULT().getPATIENT().getPID(), "PID", jsonOutput);
+                processSegment(message.getPATIENT_RESULT().getPATIENT().getVISIT().getPV1(), "PV1", jsonOutput);
+                processSegment(message.getPATIENT_RESULT().getORDER_OBSERVATION().getORC(), "ORC", jsonOutput);
+                processSegment(message.getPATIENT_RESULT().getORDER_OBSERVATION().getOBR(), "OBR", jsonOutput);
 
                 JsonArray obxArray = new JsonArray();
-                for (int i = 0; i < message.getRESPONSE().getORDER_OBSERVATION().getOBSERVATIONReps(); i++) {
+                for (int i = 0; i < message.getPATIENT_RESULT().getORDER_OBSERVATION().getOBSERVATIONReps(); i++) {
                     JsonObject obxSegmentJson = new JsonObject();
-                    processSegment(message.getRESPONSE().getORDER_OBSERVATION().getOBSERVATION(i).getOBX(), "OBX", obxSegmentJson);
+                    processSegment(message.getPATIENT_RESULT().getORDER_OBSERVATION().getOBSERVATION(i).getOBX(), "OBX", obxSegmentJson);
                     obxArray.add(obxSegmentJson);
                 }
                 jsonOutput.add("Observations", obxArray);
-                processSegment(message.getRESPONSE().getORDER_OBSERVATION().getNTE(), "NTE", jsonOutput);
+                processSegment(message.getPATIENT_RESULT().getORDER_OBSERVATION().getNTE(), "NTE", jsonOutput);
                 
          //       System.out.println(new GsonBuilder().setPrettyPrinting().create().toJson(jsonOutput));
             }    
