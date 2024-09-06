@@ -146,24 +146,26 @@ private static JsonObject parseMessageToJson(Message message) throws HL7Exceptio
                                     }
                                 }
                                 
-                                System.out.println("sub object : " + fieldObject);
-                                if(fieldObject.size()>0)
-                                {
-                                    fieldArray.add(fieldObject);
-                                }
-                             
-                                } else {
-                                }
                             }
 
+                            
+                            if(fieldObject.size()>0)
+                            {
+                                System.out.println("sub object : " + fieldObject);
+                              //  fieldArray.add(fieldObject);
+                                segmentJson.add(methodName.split("_")[1], fieldObject);
+                            }
+                         
+                            } else {
+                            }
 
                                 
                             
                         }
                         
-                        if (fieldArray.size() > 0) {
-                            segmentJson.add(methodName.split("_")[1], fieldArray);
-                        }
+                      //  if (fieldArray.size() > 0) {
+//                            segmentJson.add(methodName.split("_")[1], fieldArray);
+                     //   }
 
                         fieldNum++;
                     } catch (HL7Exception e) {
