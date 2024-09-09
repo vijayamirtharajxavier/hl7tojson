@@ -18,16 +18,40 @@ import ca.uhn.hl7v2.parser.PipeParser;
 
 public class ExtractRDEToJson {
     public static void main(String[] args) {
-       String hl7Message = "MSH|^~\\&|SendingApp|SendingFac|ReceivingApp|ReceivingFac|20230821083000||RDE^O11|123456|P|2.3\r" +
+
+/*String hl7Message ="MSH|^~\\&|SendingApp|SendingFac|ReceivingApp|ReceivingFac|202409060830||ORU^R03|123456|P|2.3\r" +
+"PID|1|123456^^^Hospital^MR|987654^^^Hospital^SS|Doe^John^A^III||19650515||||123 Main St^^Somewhere^NY^12345^USA||(123)456-7890|||M|||123-45-6789\r" +
+"PV1|1|I|ICU^15^D||||1234^Doctor^John^D|||SUR|||||123456^RefDoc^Mary^E|||ICU|A|||1|||||||||||||||||||||||202409050000|202409060000\r" +
+"ORC|RE|567890||112233|CM||||202409060800|||1234^Doctor^John^D\r" +
+"OBR|1|567890|112233|12345^CBC Panel^L|||202409060800|||||||||1234^Doctor^John^D|||||||\r" +
+"OBX|1|NM|1234-5^WBC^L|1|7.2|10^9/L|4.0-10.0|N|||F\r" +
+"OBX|2|NM|5678-9^HGB^L|1|14.0|g/dL|13.5-17.5|N|||F";*/
+
+       /*String hl7Message = "MSH|^~\\&|SendingApp|SendingFac|ReceivingApp|ReceivingFac|20230821083000||RDE^O11|123456|P|2.3\r" +
                             "PID|1||123456^^^Hosp^MR||Doe^John^A||19600101|M|||123 Main St^^Hometown^NY^12345^USA||(555)555-1234|||M|C|123456789|987-65-4320\r" +
                             "PV1|1|I|ICU^01^01^Hospital|U|3^Doctor^John|4^Surgeon^Paul|5^Nurse^Anne|||||I|987654321|||||||11111111111\r" +
                             "ORC|RE|123456|123456||CM||||20230821083000|||3^Doctor^John^A\r" +
                             "RXO|123456^Medication Order^99MED|2||PO|7D|||PRN\r" +
                             "RXR|PO^Oral^HL70162\r" +
                             "OBX|1|NM|Glucose^Serum^L|1|7.8|mmol/L|3.9-5.6|H|||F\r" +
-                            "OBX|2|NM|Glucose^Systolic^L|1|9.8|mmol/L|10.9-12.6|H|||F";
+                            "OBX|2|NM|Glucose^Systolic^L|1|9.8|mmol/L|10.9-12.6|H|||F"; */
+String hl7Message="MSH|^~\\&|SendingApp|SendingFac|ReceivingApp|ReceivingFac|202408291200||RDE^O11|123456|P|2.3\r" +
+"PID|1|78141|80901|12005|Khalil^Abdul^^BB^CC^EE^D|C|19370831|M|D|E|4612 Washington Blvd^Lot238^Harsh^FL^33772^United States^GG^FF^Pinellas|F|||English|M^Married|M^Methodist|0173|034-30-4828|23443-er-3243|R456|Test|India|1|1|U.S.|N|Ind|20200908040908|1|J|K|20240908110608|||||||\r" +
+"PV1|1|I|1^231^A^1^^N^12^1|D|0987|NA|01234|0234|034|Opertion|N|N|N|AA|BB|CC|234|1|8090101|V|I|J|A|Y|20240908|0|1|4|34|20240908|1|2|3|4|20220709|R|A|B|C|VISIT|A|D|E|20240414110000|20240417110000|300.0|110.0|20.0|90.0|765|1|2345\r" +
+"ORC|NW|ORD12345|RX12345|RX45678|CM|A0|202408291200|||123456^OrderingProvider^John^D||123456^Placer^Michael^D||||202408291200\r" +
+"RXO|12345|67890|45678|100^mg^MCG|PO|1|202408291200|202408301200||||||^No^Sig|No^Dispense|No^Admin|No^Instructions\r" +
+"RXR|IV|Forearm|1^Once^Day|202408291200|202408301200";
 
-
+ /*                           String hl7Message="MSH|^~\\&|SendingApp|SendingFac|ReceivingApp|ReceivingFac|202409060830||ORU^R21|123457|P|2.3\r " +
+"PID|1|123457^^^Hospital^MR|987654^^^Hospital^SS|Smith^Jane^B^III||19701215||||456 Elm St^^Somewhere^NY^12345^USA||(321)654-0987|||M|||987-65-4321\r " +
+"PV1|1|O|OutpatientClinic^Room12||||5678^Doctor^Alice^M|||AMB|||||987654^RefDoc^Nancy^R|||Outpatient|A|||1|||||||||||||||||||||||202409050930|202409060930\r " +
+"ORC|RE|678901||223344|CM||||202409060900|||5678^Doctor^Alice^M\r " +
+"OBR|1|678901|223344|54321^Lipid Panel^L|||202409060900|||||||||5678^Doctor^Alice^M|||||||\r " +
+"OBX|1|NM|2085-9^Cholesterol, Total^L|1|200|mg/dL|<200|N|||F\r " +
+"OBX|2|NM|2571-8^HDL Cholesterol^L|1|50|mg/dL|>40|N|||F\r " +
+"OBX|3|NM|13457-7^Triglycerides^L|1|150|mg/dL|<150|N|||F\r " +
+"OBX|4|NM|2089-1^LDL Cholesterol^L|1|100|mg/dL|<100|N|||F";
+*/
 /*String hl7Message="MSH|^~\\&|LABADT|MCM|IFENG|IFENG|202408261030||ORU^R01|123456|P|2.3\r" +
 "PID|1||123456^^^MCM^MR||DOE^JOHN^A||19700101|M|||1234 Main St^^Metropolis^IL^60615|(123)456-7890|(123)456-7891|||123456789|123-45-6789\r" +
 "PV1|1|O|ICU^02^03^MCM||||1234^Jones^Barry^M^^MD|5678^Smith^John^A^^MD|||||||||V1001^|V001|||||||||||||||||||||||||||202408261030\r" +
@@ -112,6 +136,8 @@ private static JsonObject parseMessageToJson(Message message) throws HL7Exceptio
                            // }
 
                             JsonObject fieldObject = new JsonObject();
+                            if(methodName!=null)
+                            {
                             if (!fieldValue.isEmpty()) {
                                 if (fieldRepetitions.length ==1) {
                                     // Single value
@@ -120,7 +146,7 @@ private static JsonObject parseMessageToJson(Message message) throws HL7Exceptio
                                  //       fieldValue = convertTimestamp(fieldValue);
                                   //  }
                                    dataType = field.getClass().getSimpleName();
-                                   if (dataType.contains("TS") || dataType.contains("TSComponentOne") || dataType.contains("DTM") || dataType.contains("DT")) {
+                                   if (dataType.contains("TQ") || dataType.contains("TS") || dataType.contains("TSComponentOne") || dataType.contains("DTM") || dataType.contains("DT")) {
                                     fieldValue = convertTimestamp(fieldValue);
                                 }
     
@@ -136,7 +162,7 @@ private static JsonObject parseMessageToJson(Message message) throws HL7Exceptio
                                     if (submethodName != null) {
                                         System.out.println("SubMethod Name for " + (i+1) + ": " + submethodName);
                                      dataType = field.getClass().getSimpleName();
-                                     if (dataType.contains("TS") || dataType.contains("TSComponentOne") || dataType.contains("DTM") || dataType.contains("DT")) {
+                                     if (dataType.contains("TQ") ||dataType.contains("TS") || dataType.contains("TSComponentOne") || dataType.contains("DTM") || dataType.contains("DT")) {
                                         subComponents[i] = convertTimestamp(subComponents[i]);
                                      }
 
@@ -159,7 +185,7 @@ private static JsonObject parseMessageToJson(Message message) throws HL7Exceptio
                             } else {
                             }
 
-                                
+                        }    
                             
                         }
                         
@@ -196,7 +222,7 @@ private static JsonObject parseMessageToJson(Message message) throws HL7Exceptio
     private static Class<?> getSegmentClass(String segmentName) {
         try {
             // Construct the fully qualified class name
-            String packageName = "ca.uhn.hl7v2.model.v25.segment"; // Replace with your actual package
+            String packageName = "ca.uhn.hl7v2.model.v23.segment"; // Replace with your actual package
             String className = packageName + "." + segmentName;
             return Class.forName(className);
         } catch (ClassNotFoundException e) {
